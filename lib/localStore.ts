@@ -31,10 +31,10 @@ export function defaultData(): PlannerData {
   const jardin = newId();
   return {
     people: [
-      { id: mama, name: "Mamá", color: "#ec4899", avatar_emoji: "👩" },
-      { id: papa, name: "Papá", color: "#3b82f6", avatar_emoji: "👨" },
-      { id: hijo, name: "Hijo", color: "#22c55e", avatar_emoji: "🧒" },
-      { id: emp, name: "Empleada", color: "#f59e0b", avatar_emoji: "🧹" },
+      { id: mama, name: "Mamá", color: "#ec4899", avatar_emoji: "👩", is_admin: false },
+      { id: papa, name: "Papá", color: "#3b82f6", avatar_emoji: "👨", is_admin: true },
+      { id: hijo, name: "Hijo", color: "#22c55e", avatar_emoji: "🧒", is_admin: false },
+      { id: emp, name: "Empleada", color: "#f59e0b", avatar_emoji: "🧹", is_admin: false },
     ],
     categories: [
       { id: casa, name: "Casa", color: "#8b5cf6" },

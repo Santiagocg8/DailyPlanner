@@ -10,8 +10,12 @@ create table if not exists public.people (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
   color text not null default '#6d5efc',
-  avatar_emoji text
+  avatar_emoji text,
+  is_admin boolean not null default false
 );
+
+-- Si la tabla ya existía sin la columna, la agregamos.
+alter table public.people add column if not exists is_admin boolean not null default false;
 
 -- Grupos / categorías de tareas --------------------------------------------
 create table if not exists public.categories (
@@ -50,11 +54,11 @@ create policy "open categories" on public.categories for all using (true) with c
 create policy "open tasks"      on public.tasks      for all using (true) with check (true);
 
 -- Datos iniciales -----------------------------------------------------------
-insert into public.people (name, color, avatar_emoji) values
-  ('Mamá',     '#ec4899', '👩'),
-  ('Papá',     '#3b82f6', '👨'),
-  ('Hijo',     '#22c55e', '🧒'),
-  ('Empleada', '#f59e0b', '🧹')
+insert into public.people (name, color, avatar_emoji, is_admin) values
+  ('Mamá',     '#ec4899', '👩', false),
+  ('Papá',     '#3b82f6', '👨', true),
+  ('Hijo',     '#22c55e', '🧒', false),
+  ('Empleada', '#f59e0b', '🧹', false)
 on conflict do nothing;
 
 insert into public.categories (name, color) values

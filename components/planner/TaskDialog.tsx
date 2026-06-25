@@ -25,9 +25,34 @@ const inputClass =
   "w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--ring)]";
 const labelClass = "block text-xs font-medium text-[var(--muted)] mb-1";
 
-/** Convierte un Date a string compatible con <input type="datetime-local">. */
-function toLocalInput(d: Date): string {
-  return format(d, "yyyy-MM-dd'T'HH:mm");
+/** Minutos seleccionables para la hora (cada 15 min). */
+const MINUTE_OPTIONS = [0, 15, 30, 45];
+/** Duraciones seleccionables (de 15 en 15, hasta 4 horas). */
+const DURATION_OPTIONS = Array.from({ length: 16 }, (_, i) => (i + 1) * 15);
+
+/** Convierte un Date a string para <input type="date"> (yyyy-MM-dd). */
+function toDateInput(d: Date): string {
+  return format(d, "yyyy-MM-dd");
+}
+
+/** Redondea los minutos de un Date al múltiplo de 15 más cercano. */
+function snapToQuarter(d: Date): { hour: number; minute: number } {
+  let minute = Math.round(d.getMinutes() / 15) * 15;
+  let hour = d.getHours();
+  if (minute === 60) {
+    minute = 0;
+    hour = (hour + 1) % 24;
+  }
+  return { hour, minute };
+}
+
+/** Formatea una duración en minutos como "1 h 30 min". */
+function formatDuration(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h && m) return `${h} h ${m} min`;
+  if (h) return `${h} h`;
+  return `${m} min`;
 }
 
 export function TaskDialog({
@@ -43,7 +68,9 @@ export function TaskDialog({
 }: TaskDialogProps) {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
-  const [when, setWhen] = useState(toLocalInput(defaultDate));
+  const [date, setDate] = useState(toDateInput(defaultDate));
+  const [hour, setHour] = useState(0);
+  const [minute, setMinute] = useState(0);
   const [duration, setDuration] = useState(30);
   const [personId, setPersonId] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("");
@@ -53,17 +80,24 @@ export function TaskDialog({
   useEffect(() => {
     if (!open) return;
     if (task) {
+      const d = new Date(task.scheduled_at);
+      const snapped = snapToQuarter(d);
       setTitle(task.title);
       setNotes(task.notes ?? "");
-      setWhen(toLocalInput(new Date(task.scheduled_at)));
+      setDate(toDateInput(d));
+      setHour(snapped.hour);
+      setMinute(snapped.minute);
       setDuration(task.duration_min);
       setPersonId(task.person_id ?? "");
       setCategoryId(task.category_id ?? "");
       setStatus(task.status);
     } else {
+      const snapped = snapToQuarter(defaultDate);
       setTitle("");
       setNotes("");
-      setWhen(toLocalInput(defaultDate));
+      setDate(toDateInput(defaultDate));
+      setHour(snapped.hour);
+      setMinute(snapped.minute);
       setDuration(30);
       setPersonId(defaultPersonId ?? "");
       setCategoryId("");
@@ -74,10 +108,13 @@ export function TaskDialog({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
+    // Combina la fecha (yyyy-MM-dd) con la hora y minutos elegidos.
+    const [y, mo, da] = date.split("-").map(Number);
+    const scheduled = new Date(y, mo - 1, da, hour, minute, 0, 0);
     const input: TaskInput = {
       title: title.trim(),
       notes: notes.trim() || null,
-      scheduled_at: new Date(when).toISOString(),
+      scheduled_at: scheduled.toISOString(),
       duration_min: Number(duration) || 30,
       person_id: personId || null,
       category_id: categoryId || null,
@@ -101,26 +138,58 @@ export function TaskDialog({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelClass}>Fecha</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className={labelClass}>Fecha y hora</label>
-            <input
-              type="datetime-local"
-              value={when}
-              onChange={(e) => setWhen(e.target.value)}
+            <label className={labelClass}>Hora</label>
+            <select
+              value={hour}
+              onChange={(e) => setHour(Number(e.target.value))}
               className={inputClass}
-            />
+            >
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>
+                  {String(h).padStart(2, "0")}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
-            <label className={labelClass}>Duración (min)</label>
-            <input
-              type="number"
-              min={5}
-              step={5}
+            <label className={labelClass}>Minutos</label>
+            <select
+              value={minute}
+              onChange={(e) => setMinute(Number(e.target.value))}
+              className={inputClass}
+            >
+              {MINUTE_OPTIONS.map((m) => (
+                <option key={m} value={m}>
+                  {String(m).padStart(2, "0")}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Duración</label>
+            <select
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
               className={inputClass}
-            />
+            >
+              {DURATION_OPTIONS.map((d) => (
+                <option key={d} value={d}>
+                  {formatDuration(d)}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

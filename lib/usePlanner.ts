@@ -136,6 +136,38 @@ export function usePlanner() {
     [commitLocal]
   );
 
+  const updatePerson = useCallback(
+    async (id: string, patch: Partial<Omit<Person, "id">>) => {
+      if (supabase) {
+        await supabase.from("people").update(patch).eq("id", id);
+        return;
+      }
+      const cur = localRef.current;
+      commitLocal({
+        ...cur,
+        people: cur.people.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      });
+    },
+    [commitLocal]
+  );
+
+  const deletePerson = useCallback(
+    async (id: string) => {
+      if (supabase) {
+        await supabase.from("people").delete().eq("id", id);
+        return;
+      }
+      const cur = localRef.current;
+      commitLocal({
+        ...cur,
+        people: cur.people.filter((p) => p.id !== id),
+        // Las tareas de esa persona quedan sin asignar (refleja el ON DELETE SET NULL).
+        tasks: cur.tasks.map((t) => (t.person_id === id ? { ...t, person_id: null } : t)),
+      });
+    },
+    [commitLocal]
+  );
+
   // --- Mutaciones de categorías ---
   const createCategory = useCallback(
     async (input: Omit<Category, "id">) => {
@@ -145,6 +177,37 @@ export function usePlanner() {
       }
       const cur = localRef.current;
       commitLocal({ ...cur, categories: [...cur.categories, { ...input, id: newId() }] });
+    },
+    [commitLocal]
+  );
+
+  const updateCategory = useCallback(
+    async (id: string, patch: Partial<Omit<Category, "id">>) => {
+      if (supabase) {
+        await supabase.from("categories").update(patch).eq("id", id);
+        return;
+      }
+      const cur = localRef.current;
+      commitLocal({
+        ...cur,
+        categories: cur.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+      });
+    },
+    [commitLocal]
+  );
+
+  const deleteCategory = useCallback(
+    async (id: string) => {
+      if (supabase) {
+        await supabase.from("categories").delete().eq("id", id);
+        return;
+      }
+      const cur = localRef.current;
+      commitLocal({
+        ...cur,
+        categories: cur.categories.filter((c) => c.id !== id),
+        tasks: cur.tasks.map((t) => (t.category_id === id ? { ...t, category_id: null } : t)),
+      });
     },
     [commitLocal]
   );
@@ -159,6 +222,10 @@ export function usePlanner() {
     updateTask,
     deleteTask,
     createPerson,
+    updatePerson,
+    deletePerson,
     createCategory,
+    updateCategory,
+    deleteCategory,
   };
 }

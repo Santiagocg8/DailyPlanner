@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Palette, Wifi, WifiOff } from "lucide-react";
+import { Plus, Palette, Wifi, WifiOff, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { usePlanner } from "@/lib/usePlanner";
@@ -13,6 +13,7 @@ import { DayView } from "./DayView";
 import { WeekView } from "./WeekView";
 import { MonthView } from "./MonthView";
 import { TaskDialog } from "./TaskDialog";
+import { AdminPanel } from "@/components/admin/AdminPanel";
 import { PersonPicker } from "@/components/people/PersonPicker";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ export function Planner() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   // Reloj que actualiza "ahora" cada minuto (mueve la línea y la tarea activa).
   useEffect(() => {
@@ -112,6 +114,17 @@ export function Planner() {
                 Color: {colorMode === "person" ? "Persona" : "Grupo"}
               </span>
             </Button>
+            {currentPerson?.is_admin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAdminOpen(true)}
+                title="Administrar personas y grupos"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Admin</span>
+              </Button>
+            )}
             {currentPerson && (
               <button
                 onClick={me.clear}
@@ -221,6 +234,22 @@ export function Planner() {
         onSave={handleSave}
         onDelete={(id) => planner.deleteTask(id)}
       />
+
+      {currentPerson?.is_admin && (
+        <AdminPanel
+          open={adminOpen}
+          onClose={() => setAdminOpen(false)}
+          people={people}
+          categories={categories}
+          currentPersonId={me.personId}
+          onUpdatePerson={planner.updatePerson}
+          onCreatePerson={planner.createPerson}
+          onDeletePerson={planner.deletePerson}
+          onUpdateCategory={planner.updateCategory}
+          onCreateCategory={planner.createCategory}
+          onDeleteCategory={planner.deleteCategory}
+        />
+      )}
     </div>
   );
 }

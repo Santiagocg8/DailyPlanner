@@ -5,6 +5,7 @@ export interface Person {
   name: string;
   color: string; // hex, ej. "#6d5efc"
   avatar_emoji: string | null;
+  is_admin: boolean; // los admin pueden editar personas y grupos
 }
 
 export interface Category {
