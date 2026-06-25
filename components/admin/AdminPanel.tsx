@@ -1,17 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, Shield, ShieldCheck } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import type { Category, Person } from "@/lib/types";
 import { cn, readableTextColor } from "@/lib/utils";
 
-/** Paleta de colores sugeridos para personas y grupos. */
 const PALETTE = [
-  "#ec4899", "#3b82f6", "#22c55e", "#f59e0b",
-  "#8b5cf6", "#06b6d4", "#10b981", "#ef4444",
-  "#6d5efc", "#f97316", "#14b8a6", "#a855f7",
+  "#ec4899", "#f43f5e", "#ef4444", "#f97316",
+  "#f59e0b", "#84cc16", "#22c55e", "#10b981",
+  "#06b6d4", "#3b82f6", "#6d5efc", "#8b5cf6",
+  "#a855f7", "#14b8a6", "#64748b", "#0ea5e9",
+];
+
+const FAMILY_EMOJIS = [
+  "👶", "🧒", "👦", "👧", "🧑", "👨", "👩", "👱",
+  "🧔", "👴", "👵", "🧓", "👨‍🦰", "👩‍🦰", "👨‍🦱", "👩‍🦱",
+  "👨‍🦳", "👩‍🦳", "👨‍🦲", "👩‍🦲", "🧹", "👨‍🍳", "👩‍🍳", "🐶",
 ];
 
 interface AdminPanelProps {
@@ -65,6 +71,7 @@ export function AdminPanel({
           </div>
           <AddRow
             placeholder="Nueva persona…"
+            showColor
             onAdd={(name, color) =>
               onCreatePerson({ name, color, avatar_emoji: "🙂", is_admin: false })
             }
@@ -88,7 +95,7 @@ export function AdminPanel({
           </div>
           <AddRow
             placeholder="Nuevo grupo…"
-            onAdd={(name, color) => onCreateCategory({ name, color })}
+            onAdd={(name) => onCreateCategory({ name, color: "#8b5cf6" })}
           />
         </section>
       </div>
@@ -100,41 +107,64 @@ export function AdminPanel({
   );
 }
 
-/** Selector de color en línea (paleta de puntos). */
-function ColorPicker({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (color: string) => void;
-}) {
+function ColorPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="h-8 w-8 rounded-full border-2 border-white shadow ring-1 ring-[var(--border)]"
+        className="h-9 w-9 rounded-full border-2 border-white shadow ring-1 ring-[var(--border)]"
         style={{ background: value }}
         aria-label="Cambiar color"
       />
       {open && (
-        <div className="absolute z-10 mt-1 left-0 grid grid-cols-4 gap-1.5 p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-lg">
+        <div className="absolute z-20 mt-1 left-0 grid grid-cols-4 gap-2 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-xl">
           {PALETTE.map((c) => (
             <button
               key={c}
               type="button"
-              onClick={() => {
-                onChange(c);
-                setOpen(false);
-              }}
+              onClick={() => { onChange(c); setOpen(false); }}
               className={cn(
-                "h-6 w-6 rounded-full",
-                c === value && "ring-2 ring-offset-1 ring-[var(--foreground)]"
+                "h-8 w-8 rounded-full transition-transform hover:scale-110",
+                c === value && "ring-2 ring-offset-2 ring-[var(--foreground)]"
               )}
               style={{ background: c }}
               aria-label={c}
             />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmojiPicker({ value, onChange }: { value: string; onChange: (e: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="h-9 w-9 rounded-lg border border-[var(--border)] bg-[var(--surface)] flex items-center justify-center text-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+        aria-label="Cambiar emoji"
+      >
+        {value || "🙂"}
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 left-0 grid grid-cols-6 gap-1 p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-xl w-52">
+          {FAMILY_EMOJIS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => { onChange(e); setOpen(false); }}
+              className={cn(
+                "h-8 w-8 rounded-lg flex items-center justify-center text-lg transition-colors hover:bg-black/8 dark:hover:bg-white/10",
+                e === value && "bg-[var(--primary)]/15 ring-1 ring-[var(--primary)]"
+              )}
+            >
+              {e}
+            </button>
           ))}
         </div>
       )}
@@ -153,19 +183,21 @@ function PersonRow({
   onUpdate: (patch: Partial<Omit<Person, "id">>) => void;
   onDelete: () => void;
 }) {
+  const [name, setName] = useState(person.name);
+
+  useEffect(() => { setName(person.name); }, [person.name]);
+
   return (
     <div className="flex items-center gap-2">
       <ColorPicker value={person.color} onChange={(color) => onUpdate({ color })} />
-      <input
+      <EmojiPicker
         value={person.avatar_emoji ?? ""}
-        onChange={(e) => onUpdate({ avatar_emoji: e.target.value || null })}
-        className="w-11 text-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-1 py-1.5 text-base outline-none focus:ring-2 focus:ring-[var(--ring)]"
-        aria-label="Emoji"
-        maxLength={4}
+        onChange={(e) => onUpdate({ avatar_emoji: e })}
       />
       <input
-        value={person.name}
-        onChange={(e) => onUpdate({ name: e.target.value })}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={() => onUpdate({ name })}
         className={inputClass}
         aria-label="Nombre"
       />
@@ -196,12 +228,16 @@ function CategoryRow({
   onUpdate: (patch: Partial<Omit<Category, "id">>) => void;
   onDelete: () => void;
 }) {
+  const [name, setName] = useState(category.name);
+
+  useEffect(() => { setName(category.name); }, [category.name]);
+
   return (
     <div className="flex items-center gap-2">
-      <ColorPicker value={category.color} onChange={(color) => onUpdate({ color })} />
       <input
-        value={category.name}
-        onChange={(e) => onUpdate({ name: e.target.value })}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={() => onUpdate({ name })}
         className={inputClass}
         aria-label="Nombre del grupo"
       />
@@ -235,13 +271,14 @@ function DeleteButton({
 /** Fila para agregar un nuevo elemento (persona o grupo). */
 function AddRow({
   placeholder,
+  showColor = false,
   onAdd,
 }: {
   placeholder: string;
+  showColor?: boolean;
   onAdd: (name: string, color: string) => void;
 }) {
   const [name, setName] = useState("");
-  // Color rotado por defecto para que cada nuevo elemento se vea distinto.
   const [color, setColor] = useState(PALETTE[Math.floor(PALETTE.length / 2)]);
 
   function add() {
@@ -253,7 +290,7 @@ function AddRow({
 
   return (
     <div className="flex items-center gap-2 mt-2">
-      <ColorPicker value={color} onChange={setColor} />
+      {showColor && <ColorPicker value={color} onChange={setColor} />}
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
