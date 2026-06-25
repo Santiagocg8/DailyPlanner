@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Check, Clock, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import type { Category, Person, Task } from "@/lib/types";
@@ -17,6 +18,7 @@ interface TaskCardProps {
   onPostpone: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onPreview?: () => void;
 }
 
 export function TaskCard({
@@ -30,10 +32,30 @@ export function TaskCard({
   onPostpone,
   onEdit,
   onDelete,
+  onPreview,
 }: TaskCardProps) {
   const done = task.status === "done";
   const text = readableTextColor(color);
   const start = parseISO(task.scheduled_at);
+
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
+  function startLongPress() {
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      onPreview?.();
+    }, 400);
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  }
+
+  function handleCardClick() {
+    if (!didLongPress.current) onPreview?.();
+  }
 
   return (
     <motion.div
@@ -41,7 +63,7 @@ export function TaskCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "group relative h-full rounded-2xl px-3 py-2 shadow-sm border overflow-hidden transition-all",
+        "group relative h-full rounded-2xl px-3 py-2 shadow-sm border overflow-hidden transition-all cursor-pointer select-none",
         active && "ring-2 ring-offset-2 ring-offset-[var(--background)]",
         done && "opacity-60"
       )}
@@ -51,9 +73,21 @@ export function TaskCard({
         borderColor: "rgba(0,0,0,0.06)",
         boxShadow: active ? `0 0 0 0 ${color}` : undefined,
       }}
+      onClick={handleCardClick}
+      onTouchStart={startLongPress}
+      onTouchEnd={cancelLongPress}
+      onTouchMove={cancelLongPress}
+      onMouseDown={startLongPress}
+      onMouseUp={cancelLongPress}
+      onMouseLeave={cancelLongPress}
     >
       {/* Acciones — esquina superior derecha */}
-      <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-50 group-hover:opacity-100 transition-opacity">
+      <div
+        className="absolute top-1 right-1 flex items-center gap-0.5 opacity-50 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         {!compact && (
           <IconAction label="Postergar" onClick={onPostpone} text={text}>
             <RotateCcw className="h-3 w-3" />
@@ -69,7 +103,9 @@ export function TaskCard({
 
       <div className="flex items-start gap-2 pr-16">
         <button
-          onClick={onToggleDone}
+          onClick={(e) => { e.stopPropagation(); onToggleDone(); }}
+          onTouchStart={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
           aria-label={done ? "Marcar como pendiente" : "Marcar como completada"}
           className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors"
           style={{ borderColor: text }}

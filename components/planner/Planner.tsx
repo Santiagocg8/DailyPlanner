@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Palette, Wifi, WifiOff, Settings } from "lucide-react";
+import { Plus, Wifi, WifiOff, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { usePlanner } from "@/lib/usePlanner";
@@ -13,6 +13,7 @@ import { DayView } from "./DayView";
 import { WeekView } from "./WeekView";
 import { MonthView } from "./MonthView";
 import { TaskDialog } from "./TaskDialog";
+import { TaskPreviewSheet } from "./TaskPreviewSheet";
 import { AdminPanel } from "@/components/admin/AdminPanel";
 import { PersonPicker } from "@/components/people/PersonPicker";
 import { cn } from "@/lib/utils";
@@ -25,11 +26,12 @@ export function Planner() {
   const [view, setView] = useState<ViewMode>("day");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [now, setNow] = useState<Date>(() => new Date());
-  const [colorMode, setColorMode] = useState<ColorMode>("person");
+  const colorMode: ColorMode = "person";
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [previewTask, setPreviewTask] = useState<Task | null>(null);
 
   // Reloj que actualiza "ahora" cada minuto (mueve la línea y la tarea activa).
   useEffect(() => {
@@ -41,6 +43,14 @@ export function Planner() {
     () => people.find((p) => p.id === me.personId) ?? null,
     [people, me.personId]
   );
+
+  const peopleById = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
+  const catsById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
+  function colorFor(task: Task): string {
+    if (colorMode === "person") return peopleById.get(task.person_id ?? "")?.color ?? "#94a3b8";
+    return catsById.get(task.category_id ?? "")?.color ?? "#94a3b8";
+  }
 
   function navigate(dir: number) {
     if (view === "month") setAnchor((a) => addMonths(a, dir));
@@ -103,17 +113,6 @@ export function Planner() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setColorMode((m) => (m === "person" ? "category" : "person"))}
-              title="Cambiar cómo se colorean las tareas"
-            >
-              <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">
-                Color: {colorMode === "person" ? "Persona" : "Grupo"}
-              </span>
-            </Button>
             {currentPerson?.is_admin && (
               <Button
                 variant="outline"
@@ -175,6 +174,7 @@ export function Planner() {
                 onPostpone={postpone}
                 onEdit={openEdit}
                 onDelete={(t) => planner.deleteTask(t.id)}
+                onPreview={(t) => setPreviewTask(t)}
               />
             )}
             {view === "week" && (
@@ -250,6 +250,19 @@ export function Planner() {
           onDeleteCategory={planner.deleteCategory}
         />
       )}
+
+      <TaskPreviewSheet
+        open={previewTask !== null}
+        task={previewTask}
+        color={previewTask ? colorFor(previewTask) : "#94a3b8"}
+        person={previewTask ? peopleById.get(previewTask.person_id ?? "") : undefined}
+        category={previewTask ? catsById.get(previewTask.category_id ?? "") : undefined}
+        onClose={() => setPreviewTask(null)}
+        onToggleDone={() => previewTask && toggleDone(previewTask)}
+        onPostpone={() => previewTask && postpone(previewTask)}
+        onEdit={() => { if (previewTask) { setPreviewTask(null); openEdit(previewTask); } }}
+        onDelete={() => { if (previewTask) { planner.deleteTask(previewTask.id); setPreviewTask(null); } }}
+      />
     </div>
   );
 }
