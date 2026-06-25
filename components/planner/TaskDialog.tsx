@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { DrumPicker } from "@/components/ui/DrumPicker";
 import type { Category, Person, Task, TaskInput } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface TaskDialogProps {
   open: boolean;
@@ -51,6 +52,29 @@ function formatDuration(min: number): string {
   return `${m} min`;
 }
 
+const WEEKDAYS = [
+  { label: "Lun", day: 1 },
+  { label: "Mar", day: 2 },
+  { label: "Mié", day: 3 },
+  { label: "Jue", day: 4 },
+  { label: "Vie", day: 5 },
+  { label: "Sáb", day: 6 },
+  { label: "Dom", day: 0 },
+];
+
+function generateRecurDates(from: string, until: string, days: number[]): Date[] {
+  const [fy, fmo, fda] = from.split("-").map(Number);
+  const [uy, umo, uda] = until.split("-").map(Number);
+  const dates: Date[] = [];
+  const cur = new Date(fy, fmo - 1, fda);
+  const end = new Date(uy, umo - 1, uda);
+  while (cur <= end) {
+    if (days.includes(cur.getDay())) dates.push(new Date(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => ({
   value: h,
   label: String(h).padStart(2, "0"),
@@ -83,6 +107,9 @@ export function TaskDialog({
   const [duration, setDuration] = useState(30);
   const [personId, setPersonId] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("");
+  const [recurring, setRecurring] = useState(false);
+  const [recurDays, setRecurDays] = useState<number[]>([]);
+  const [recurUntil, setRecurUntil] = useState("");
 
   // Rellenar el formulario al abrir.
   useEffect(() => {
@@ -98,6 +125,9 @@ export function TaskDialog({
       setDuration(task.duration_min);
       setPersonId(task.person_id ?? "");
       setCategoryId(task.category_id ?? "");
+      setRecurring(false);
+      setRecurDays([]);
+      setRecurUntil("");
     } else {
       const snapped = snapToFive(defaultDate);
       setTitle("");
@@ -108,24 +138,34 @@ export function TaskDialog({
       setDuration(30);
       setPersonId(defaultPersonId ?? "");
       setCategoryId("");
+      setRecurring(false);
+      setRecurDays([]);
+      setRecurUntil("");
     }
   }, [open, task, defaultDate, defaultPersonId]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    const [y, mo, da] = date.split("-").map(Number);
-    const scheduled = new Date(y, mo - 1, da, hour, minute, 0, 0);
-    const input: TaskInput = {
+
+    const base = {
       title: title.trim(),
       notes: notes.trim() || null,
-      scheduled_at: scheduled.toISOString(),
       duration_min: Number(duration) || 30,
       person_id: personId || null,
       category_id: categoryId || null,
-      status: task?.status ?? "pending",
     };
-    onSave(input, task?.id);
+
+    if (!task && recurring && recurDays.length > 0 && recurUntil) {
+      for (const d of generateRecurDates(date, recurUntil, recurDays)) {
+        d.setHours(hour, minute, 0, 0);
+        onSave({ ...base, scheduled_at: d.toISOString(), status: "pending" });
+      }
+    } else {
+      const [y, mo, da] = date.split("-").map(Number);
+      const scheduled = new Date(y, mo - 1, da, hour, minute, 0, 0);
+      onSave({ ...base, scheduled_at: scheduled.toISOString(), status: task?.status ?? "pending" }, task?.id);
+    }
     onClose();
   }
 
@@ -211,7 +251,64 @@ export function TaskDialog({
           />
         </div>
 
-<div className="flex items-center justify-between gap-2 pt-2">
+        {!task && (
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={recurring}
+                onChange={(e) => {
+                  setRecurring(e.target.checked);
+                  if (e.target.checked && !recurUntil) {
+                    const d = new Date(date);
+                    d.setDate(d.getDate() + 28);
+                    setRecurUntil(toDateInput(d));
+                  }
+                }}
+                className="h-4 w-4 rounded accent-[var(--primary)]"
+              />
+              <span className="text-sm font-medium">Repetir en otros días</span>
+            </label>
+
+            {recurring && (
+              <div className="space-y-3">
+                <div className="flex gap-1.5">
+                  {WEEKDAYS.map(({ label, day }) => (
+                    <button
+                      type="button"
+                      key={day}
+                      onClick={() =>
+                        setRecurDays((prev) =>
+                          prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+                        )
+                      }
+                      className={cn(
+                        "flex-1 h-8 rounded-lg text-xs font-semibold transition-colors",
+                        recurDays.includes(day)
+                          ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                          : "border border-[var(--border)] hover:bg-black/5 dark:hover:bg-white/5"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div>
+                  <label className={labelClass}>Hasta</label>
+                  <input
+                    type="date"
+                    value={recurUntil}
+                    min={date}
+                    onChange={(e) => setRecurUntil(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2 pt-2">
           {task && onDelete ? (
             <Button
               type="button"
