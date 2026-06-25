@@ -19,7 +19,7 @@ interface Props {
 
 export function DrumPicker({ options, value, onChange, width = 64 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const initialized = useRef(false);
 
   const idx = Math.max(0, options.findIndex((o) => o.value === value));
