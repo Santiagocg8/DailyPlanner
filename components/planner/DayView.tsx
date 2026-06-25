@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { Category, ColorMode, Person, Task } from "@/lib/types";
 import {
+  addMinutes,
   DAY_START_HOUR,
   HOUR_HEIGHT,
   isSameDay,
@@ -12,6 +13,45 @@ import {
   timelineHours,
 } from "@/lib/time";
 import { TaskCard } from "./TaskCard";
+
+interface TaskLayout {
+  task: Task;
+  col: number;
+  totalCols: number;
+}
+
+function computeLayout(tasks: Task[]): TaskLayout[] {
+  if (tasks.length === 0) return [];
+
+  const sorted = [...tasks].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+  const colEnds: Date[] = [];
+  const assigned: { task: Task; col: number }[] = [];
+
+  for (const task of sorted) {
+    const start = parseISO(task.scheduled_at);
+    const end = addMinutes(start, task.duration_min);
+    let col = colEnds.findIndex((e) => e <= start);
+    if (col === -1) {
+      col = colEnds.length;
+      colEnds.push(end);
+    } else {
+      colEnds[col] = end;
+    }
+    assigned.push({ task, col });
+  }
+
+  return assigned.map(({ task, col }) => {
+    const start = parseISO(task.scheduled_at);
+    const end = addMinutes(start, task.duration_min);
+    const concurrent = assigned.filter(({ task: o }) => {
+      const os = parseISO(o.scheduled_at);
+      const oe = addMinutes(os, o.duration_min);
+      return os < end && oe > start;
+    });
+    const totalCols = Math.max(...concurrent.map((t) => t.col)) + 1;
+    return { task, col, totalCols };
+  });
+}
 
 interface DayViewProps {
   day: Date;
@@ -49,6 +89,8 @@ export function DayView({
         .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)),
     [tasks, day]
   );
+
+  const layouts = useMemo(() => computeLayout(dayTasks), [dayTasks]);
 
   const isToday = isSameDay(day, now);
   const hours = timelineHours();
@@ -101,17 +143,29 @@ export function DayView({
 
         {/* Tareas posicionadas por hora */}
         <div className="absolute left-14 right-1 top-0">
-          {dayTasks.map((task) => {
+          {layouts.map(({ task, col, totalCols }) => {
             const top = offsetForDate(parseISO(task.scheduled_at));
             const height = Math.max(48, (task.duration_min / 60) * HOUR_HEIGHT - 6);
+            const widthPct = 100 / totalCols;
+            const leftPct = (col / totalCols) * 100;
             return (
-              <div key={task.id} className="absolute left-0 right-0" style={{ top, minHeight: height }}>
+              <div
+                key={task.id}
+                className="absolute"
+                style={{
+                  top,
+                  height,
+                  left: `${leftPct}%`,
+                  width: `calc(${widthPct}% - ${col < totalCols - 1 ? 4 : 0}px)`,
+                }}
+              >
                 <TaskCard
                   task={task}
                   color={colorFor(task)}
                   person={peopleById.get(task.person_id ?? "")}
                   category={catsById.get(task.category_id ?? "")}
                   active={isToday && isTaskActive(task, now)}
+                  compact={totalCols > 1}
                   onToggleDone={() => onToggleDone(task)}
                   onPostpone={() => onPostpone(task)}
                   onEdit={() => onEdit(task)}

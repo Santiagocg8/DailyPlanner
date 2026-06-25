@@ -41,7 +41,7 @@ export function TaskCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "group rounded-2xl px-3 py-2 shadow-sm border overflow-hidden transition-all",
+        "group relative h-full rounded-2xl px-3 py-2 shadow-sm border overflow-hidden transition-all",
         active && "ring-2 ring-offset-2 ring-offset-[var(--background)]",
         done && "opacity-60"
       )}
@@ -52,7 +52,22 @@ export function TaskCard({
         boxShadow: active ? `0 0 0 0 ${color}` : undefined,
       }}
     >
-      <div className="flex items-start gap-2">
+      {/* Acciones — esquina superior derecha */}
+      <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-50 group-hover:opacity-100 transition-opacity">
+        {!compact && (
+          <IconAction label="Postergar" onClick={onPostpone} text={text}>
+            <RotateCcw className="h-3 w-3" />
+          </IconAction>
+        )}
+        <IconAction label="Editar" onClick={onEdit} text={text}>
+          <Pencil className="h-3 w-3" />
+        </IconAction>
+        <IconAction label="Eliminar" onClick={onDelete} text={text}>
+          <Trash2 className="h-3 w-3" />
+        </IconAction>
+      </div>
+
+      <div className="flex items-start gap-2 pr-16">
         <button
           onClick={onToggleDone}
           aria-label={done ? "Marcar como pendiente" : "Marcar como completada"}
@@ -71,31 +86,13 @@ export function TaskCard({
               <Clock className="h-3 w-3" />
               {format(start, "HH:mm")}
             </span>
-            {person && <span className="truncate">{person.avatar_emoji} {person.name}</span>}
-            {category && <span className="truncate">· {category.name}</span>}
+            {!compact && person && <span className="truncate">{person.avatar_emoji} {person.name}</span>}
+            {!compact && category && <span className="truncate">· {category.name}</span>}
           </div>
           {!compact && task.notes && (
             <p className="text-xs opacity-80 mt-1 line-clamp-2">{task.notes}</p>
           )}
         </div>
-      </div>
-
-      {/* Acciones rápidas */}
-      <div
-        className={cn(
-          "flex items-center justify-end gap-1 mt-2 transition-opacity",
-          "sm:opacity-0 sm:group-hover:opacity-100"
-        )}
-      >
-        <IconAction label="Postergar" onClick={onPostpone} text={text}>
-          <RotateCcw className="h-3.5 w-3.5" />
-        </IconAction>
-        <IconAction label="Editar" onClick={onEdit} text={text}>
-          <Pencil className="h-3.5 w-3.5" />
-        </IconAction>
-        <IconAction label="Eliminar" onClick={onDelete} text={text}>
-          <Trash2 className="h-3.5 w-3.5" />
-        </IconAction>
       </div>
     </motion.div>
   );
@@ -117,7 +114,7 @@ function IconAction({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-black/15 transition-colors"
+      className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-black/20 transition-colors"
       style={{ color: text }}
     >
       {children}

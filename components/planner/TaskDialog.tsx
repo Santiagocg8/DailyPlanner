@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import type { Category, Person, Task, TaskInput, TaskStatus } from "@/lib/types";
+import { DrumPicker } from "@/components/ui/DrumPicker";
+import type { Category, Person, Task, TaskInput } from "@/lib/types";
 
 interface TaskDialogProps {
   open: boolean;
@@ -25,19 +26,14 @@ const inputClass =
   "w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--ring)]";
 const labelClass = "block text-xs font-medium text-[var(--muted)] mb-1";
 
-/** Minutos seleccionables para la hora (cada 15 min). */
-const MINUTE_OPTIONS = [0, 15, 30, 45];
-/** Duraciones seleccionables (de 15 en 15, hasta 4 horas). */
-const DURATION_OPTIONS = Array.from({ length: 16 }, (_, i) => (i + 1) * 15);
-
 /** Convierte un Date a string para <input type="date"> (yyyy-MM-dd). */
 function toDateInput(d: Date): string {
   return format(d, "yyyy-MM-dd");
 }
 
-/** Redondea los minutos de un Date al múltiplo de 15 más cercano. */
-function snapToQuarter(d: Date): { hour: number; minute: number } {
-  let minute = Math.round(d.getMinutes() / 15) * 15;
+/** Redondea los minutos de un Date al múltiplo de 5 más cercano. */
+function snapToFive(d: Date): { hour: number; minute: number } {
+  let minute = Math.round(d.getMinutes() / 5) * 5;
   let hour = d.getHours();
   if (minute === 60) {
     minute = 0;
@@ -54,6 +50,19 @@ function formatDuration(min: number): string {
   if (h) return `${h} h`;
   return `${m} min`;
 }
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => ({
+  value: h,
+  label: String(h).padStart(2, "0"),
+}));
+const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5).map((m) => ({
+  value: m,
+  label: String(m).padStart(2, "0"),
+}));
+const DURATION_OPTIONS = Array.from({ length: 16 }, (_, i) => (i + 1) * 15).map((d) => ({
+  value: d,
+  label: formatDuration(d),
+}));
 
 export function TaskDialog({
   open,
@@ -74,14 +83,13 @@ export function TaskDialog({
   const [duration, setDuration] = useState(30);
   const [personId, setPersonId] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("");
-  const [status, setStatus] = useState<TaskStatus>("pending");
 
   // Rellenar el formulario al abrir.
   useEffect(() => {
     if (!open) return;
     if (task) {
       const d = new Date(task.scheduled_at);
-      const snapped = snapToQuarter(d);
+      const snapped = snapToFive(d);
       setTitle(task.title);
       setNotes(task.notes ?? "");
       setDate(toDateInput(d));
@@ -90,9 +98,8 @@ export function TaskDialog({
       setDuration(task.duration_min);
       setPersonId(task.person_id ?? "");
       setCategoryId(task.category_id ?? "");
-      setStatus(task.status);
     } else {
-      const snapped = snapToQuarter(defaultDate);
+      const snapped = snapToFive(defaultDate);
       setTitle("");
       setNotes("");
       setDate(toDateInput(defaultDate));
@@ -101,14 +108,12 @@ export function TaskDialog({
       setDuration(30);
       setPersonId(defaultPersonId ?? "");
       setCategoryId("");
-      setStatus("pending");
     }
   }, [open, task, defaultDate, defaultPersonId]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    // Combina la fecha (yyyy-MM-dd) con la hora y minutos elegidos.
     const [y, mo, da] = date.split("-").map(Number);
     const scheduled = new Date(y, mo - 1, da, hour, minute, 0, 0);
     const input: TaskInput = {
@@ -118,7 +123,7 @@ export function TaskDialog({
       duration_min: Number(duration) || 30,
       person_id: personId || null,
       category_id: categoryId || null,
-      status,
+      status: task?.status ?? "pending",
     };
     onSave(input, task?.id);
     onClose();
@@ -148,48 +153,17 @@ export function TaskDialog({
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className={labelClass}>Hora</label>
-            <select
-              value={hour}
-              onChange={(e) => setHour(Number(e.target.value))}
-              className={inputClass}
-            >
-              {Array.from({ length: 24 }, (_, h) => (
-                <option key={h} value={h}>
-                  {String(h).padStart(2, "0")}
-                </option>
-              ))}
-            </select>
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+          <div className="flex justify-around mb-2">
+            <span className="text-xs font-medium text-[var(--muted)] w-32 text-center">Hora</span>
+            <span className="text-xs font-medium text-[var(--muted)] w-20 text-center">Duración</span>
           </div>
-          <div>
-            <label className={labelClass}>Minutos</label>
-            <select
-              value={minute}
-              onChange={(e) => setMinute(Number(e.target.value))}
-              className={inputClass}
-            >
-              {MINUTE_OPTIONS.map((m) => (
-                <option key={m} value={m}>
-                  {String(m).padStart(2, "0")}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Duración</label>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              className={inputClass}
-            >
-              {DURATION_OPTIONS.map((d) => (
-                <option key={d} value={d}>
-                  {formatDuration(d)}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center justify-center gap-1">
+            <DrumPicker options={HOUR_OPTIONS} value={hour} onChange={setHour} width={60} />
+            <span className="text-lg font-semibold text-[var(--muted)] pb-px select-none">:</span>
+            <DrumPicker options={MINUTE_OPTIONS} value={minute} onChange={setMinute} width={56} />
+            <div className="w-px self-stretch bg-[var(--border)] mx-3" />
+            <DrumPicker options={DURATION_OPTIONS} value={duration} onChange={setDuration} width={80} />
           </div>
         </div>
 
@@ -237,22 +211,7 @@ export function TaskDialog({
           />
         </div>
 
-        {task && (
-          <div>
-            <label className={labelClass}>Estado</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as TaskStatus)}
-              className={inputClass}
-            >
-              <option value="pending">Pendiente</option>
-              <option value="done">Completada</option>
-              <option value="postponed">Postergada</option>
-            </select>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between gap-2 pt-2">
+<div className="flex items-center justify-between gap-2 pt-2">
           {task && onDelete ? (
             <Button
               type="button"
