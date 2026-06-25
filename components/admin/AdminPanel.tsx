@@ -26,6 +26,7 @@ interface AdminPanelProps {
   people: Person[];
   categories: Category[];
   currentPersonId: string | null;
+  onChangeProfile: () => void;
   onUpdatePerson: (id: string, patch: Partial<Omit<Person, "id">>) => void;
   onCreatePerson: (input: Omit<Person, "id">) => void;
   onDeletePerson: (id: string) => void;
@@ -43,6 +44,7 @@ export function AdminPanel({
   people,
   categories,
   currentPersonId,
+  onChangeProfile,
   onUpdatePerson,
   onCreatePerson,
   onDeletePerson,
@@ -50,9 +52,36 @@ export function AdminPanel({
   onCreateCategory,
   onDeleteCategory,
 }: AdminPanelProps) {
+  const currentPerson = people.find((p) => p.id === currentPersonId) ?? null;
+
   return (
     <Modal open={open} onClose={onClose} title="Administración">
       <div className="space-y-6">
+
+        {/* Perfil activo */}
+        {currentPerson && (
+          <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--border)]/20 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <span
+                className="h-8 w-8 rounded-full flex items-center justify-center text-sm shrink-0"
+                style={{ background: currentPerson.color, color: readableTextColor(currentPerson.color) }}
+              >
+                {currentPerson.avatar_emoji ?? currentPerson.name[0]}
+              </span>
+              <div>
+                <p className="text-sm font-medium leading-tight">{currentPerson.name}</p>
+                <p className="text-xs text-[var(--muted)]">Perfil activo</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { onClose(); onChangeProfile(); }}
+              className="text-xs text-[var(--primary)] hover:underline font-medium"
+            >
+              Cambiar
+            </button>
+          </div>
+        )}
         {/* --- Personas --- */}
         <section>
           <h3 className="text-sm font-semibold mb-2 text-[var(--muted)] uppercase tracking-wide">

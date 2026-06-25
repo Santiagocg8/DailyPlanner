@@ -242,6 +242,7 @@ export function Planner() {
           people={people}
           categories={categories}
           currentPersonId={me.personId}
+          onChangeProfile={me.clear}
           onUpdatePerson={planner.updatePerson}
           onCreatePerson={planner.createPerson}
           onDeletePerson={planner.deletePerson}

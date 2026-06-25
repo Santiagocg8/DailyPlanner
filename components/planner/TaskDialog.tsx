@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
+import { Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { DrumPicker } from "@/components/ui/DrumPicker";
@@ -111,9 +112,47 @@ export function TaskDialog({
   const [recurDays, setRecurDays] = useState<number[]>([]);
   const [recurUntil, setRecurUntil] = useState("");
 
+  const [foodSuggestions, setFoodSuggestions] = useState<string[]>([]);
+  const [foodLoading, setFoodLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const FOOD_KEYWORDS = ["desayuno", "almuerzo", "comida", "algo", "media mañana", "media manana", "media tarde", "merienda", "snack"];
+
+  // Detectar palabras clave de comida y pedir sugerencias con debounce.
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const lower = title.toLowerCase();
+    const isFoodTitle = FOOD_KEYWORDS.some((kw) => lower.includes(kw));
+    if (!isFoodTitle || title.trim().length < 3) {
+      setFoodSuggestions([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      setFoodLoading(true);
+      try {
+        const res = await fetch("/api/food-ideas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        });
+        const data = await res.json();
+        setFoodSuggestions(data.suggestions ?? []);
+      } catch {
+        setFoodSuggestions([]);
+      } finally {
+        setFoodLoading(false);
+      }
+    }, 800);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title]);
+
   // Rellenar el formulario al abrir.
   useEffect(() => {
     if (!open) return;
+    setFoodSuggestions([]);
     if (task) {
       const d = new Date(task.scheduled_at);
       const snapped = snapToFive(d);
@@ -250,6 +289,44 @@ export function TaskDialog({
             placeholder="Detalles…"
           />
         </div>
+
+        {/* Ideas de comida para la bebé */}
+        {(foodLoading || foodSuggestions.length > 0) && (
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted)]">
+              <Sparkles className="h-3.5 w-3.5" />
+              Ideas para la bebé
+            </div>
+            {foodLoading ? (
+              <div className="flex gap-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-7 rounded-full bg-[var(--border)] animate-pulse"
+                    style={{ width: `${60 + i * 20}px` }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {foodSuggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setNotes((n) => (n ? `${n}\n${s}` : s))}
+                    className={cn(
+                      "px-3 py-1 rounded-full text-xs font-medium border border-[var(--border)]",
+                      "hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] hover:border-[var(--primary)]",
+                      "transition-colors active:scale-95"
+                    )}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {!task && (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 space-y-3">
