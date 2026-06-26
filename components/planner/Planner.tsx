@@ -16,6 +16,7 @@ import { TaskDialog } from "./TaskDialog";
 import { TaskPreviewSheet } from "./TaskPreviewSheet";
 import { AdminPanel } from "@/components/admin/AdminPanel";
 import { PersonPicker } from "@/components/people/PersonPicker";
+import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
 
 export function Planner() {
@@ -32,6 +33,7 @@ export function Planner() {
   const [editing, setEditing] = useState<Task | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Reloj que actualiza "ahora" cada minuto (mueve la línea y la tarea activa).
   useEffect(() => {
@@ -79,6 +81,19 @@ export function Planner() {
   function postpone(t: Task) {
     const next = addMinutes(parseISO(t.scheduled_at), 30);
     planner.updateTask(t.id, { scheduled_at: next.toISOString(), status: "postponed" });
+  }
+
+  function requestDelete(id: string) {
+    setConfirmDeleteId(id);
+  }
+
+  function confirmDelete() {
+    if (confirmDeleteId) {
+      planner.deleteTask(confirmDeleteId);
+      if (previewTask?.id === confirmDeleteId) setPreviewTask(null);
+      if (editing?.id === confirmDeleteId) setDialogOpen(false);
+    }
+    setConfirmDeleteId(null);
   }
 
   // Esperar a saber si hay perfil elegido.
@@ -173,7 +188,7 @@ export function Planner() {
                 onToggleDone={toggleDone}
                 onPostpone={postpone}
                 onEdit={openEdit}
-                onDelete={(t) => planner.deleteTask(t.id)}
+                onDelete={(t) => requestDelete(t.id)}
                 onPreview={(t) => setPreviewTask(t)}
               />
             )}
@@ -232,7 +247,7 @@ export function Planner() {
         people={people}
         categories={categories}
         onSave={handleSave}
-        onDelete={(id) => planner.deleteTask(id)}
+        onDelete={(id) => requestDelete(id)}
       />
 
       {currentPerson?.is_admin && (
@@ -262,8 +277,26 @@ export function Planner() {
         onToggleDone={() => previewTask && toggleDone(previewTask)}
         onPostpone={() => previewTask && postpone(previewTask)}
         onEdit={() => { if (previewTask) { setPreviewTask(null); openEdit(previewTask); } }}
-        onDelete={() => { if (previewTask) { planner.deleteTask(previewTask.id); setPreviewTask(null); } }}
+        onDelete={() => { if (previewTask) { requestDelete(previewTask.id); setPreviewTask(null); } }}
       />
+
+      <Modal
+        open={confirmDeleteId !== null}
+        onClose={() => setConfirmDeleteId(null)}
+        title="Eliminar tarea"
+      >
+        <p className="text-sm text-[var(--muted)] mb-6">
+          ¿Estás seguro que deseas eliminar esta tarea? Esta acción no se puede deshacer.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={confirmDelete}>
+            Eliminar
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
