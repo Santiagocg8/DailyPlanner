@@ -20,6 +20,15 @@ interface TaskLayout {
   totalCols: number;
 }
 
+// Duración visual mínima: 48px height / 72px per hour * 60 min = 40 min.
+// El layout debe usar la misma duración efectiva que se renderiza para evitar solapamiento visual.
+const MIN_VISUAL_DURATION = Math.ceil((48 / HOUR_HEIGHT) * 60);
+
+function visualEnd(task: Task): Date {
+  const start = parseISO(task.scheduled_at);
+  return addMinutes(start, Math.max(task.duration_min, MIN_VISUAL_DURATION));
+}
+
 function computeLayout(tasks: Task[]): TaskLayout[] {
   if (tasks.length === 0) return [];
 
@@ -29,7 +38,7 @@ function computeLayout(tasks: Task[]): TaskLayout[] {
 
   for (const task of sorted) {
     const start = parseISO(task.scheduled_at);
-    const end = addMinutes(start, task.duration_min);
+    const end = visualEnd(task);
     let col = colEnds.findIndex((e) => e <= start);
     if (col === -1) {
       col = colEnds.length;
@@ -42,10 +51,10 @@ function computeLayout(tasks: Task[]): TaskLayout[] {
 
   return assigned.map(({ task, col }) => {
     const start = parseISO(task.scheduled_at);
-    const end = addMinutes(start, task.duration_min);
+    const end = visualEnd(task);
     const concurrent = assigned.filter(({ task: o }) => {
       const os = parseISO(o.scheduled_at);
-      const oe = addMinutes(os, o.duration_min);
+      const oe = visualEnd(o);
       return os < end && oe > start;
     });
     const totalCols = Math.max(...concurrent.map((t) => t.col)) + 1;
@@ -64,6 +73,7 @@ interface DayViewProps {
   onPostpone: (t: Task) => void;
   onEdit: (t: Task) => void;
   onDelete: (t: Task) => void;
+  onPreview: (t: Task) => void;
 }
 
 export function DayView({
@@ -77,6 +87,7 @@ export function DayView({
   onPostpone,
   onEdit,
   onDelete,
+  onPreview,
 }: DayViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const peopleById = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
@@ -170,6 +181,7 @@ export function DayView({
                   onPostpone={() => onPostpone(task)}
                   onEdit={() => onEdit(task)}
                   onDelete={() => onDelete(task)}
+                  onPreview={() => onPreview(task)}
                 />
               </div>
             );

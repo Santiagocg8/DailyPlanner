@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Palette, Wifi, WifiOff, Settings } from "lucide-react";
+import { Plus, Wifi, WifiOff, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { usePlanner } from "@/lib/usePlanner";
@@ -13,8 +13,10 @@ import { DayView } from "./DayView";
 import { WeekView } from "./WeekView";
 import { MonthView } from "./MonthView";
 import { TaskDialog } from "./TaskDialog";
+import { TaskPreviewSheet } from "./TaskPreviewSheet";
 import { AdminPanel } from "@/components/admin/AdminPanel";
 import { PersonPicker } from "@/components/people/PersonPicker";
+import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
 
 export function Planner() {
@@ -25,11 +27,13 @@ export function Planner() {
   const [view, setView] = useState<ViewMode>("day");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [now, setNow] = useState<Date>(() => new Date());
-  const [colorMode, setColorMode] = useState<ColorMode>("person");
+  const colorMode: ColorMode = "person";
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [previewTask, setPreviewTask] = useState<Task | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Reloj que actualiza "ahora" cada minuto (mueve la línea y la tarea activa).
   useEffect(() => {
@@ -41,6 +45,14 @@ export function Planner() {
     () => people.find((p) => p.id === me.personId) ?? null,
     [people, me.personId]
   );
+
+  const peopleById = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
+  const catsById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
+  function colorFor(task: Task): string {
+    if (colorMode === "person") return peopleById.get(task.person_id ?? "")?.color ?? "#94a3b8";
+    return catsById.get(task.category_id ?? "")?.color ?? "#94a3b8";
+  }
 
   function navigate(dir: number) {
     if (view === "month") setAnchor((a) => addMonths(a, dir));
@@ -69,6 +81,19 @@ export function Planner() {
   function postpone(t: Task) {
     const next = addMinutes(parseISO(t.scheduled_at), 30);
     planner.updateTask(t.id, { scheduled_at: next.toISOString(), status: "postponed" });
+  }
+
+  function requestDelete(id: string) {
+    setConfirmDeleteId(id);
+  }
+
+  function confirmDelete() {
+    if (confirmDeleteId) {
+      planner.deleteTask(confirmDeleteId);
+      if (previewTask?.id === confirmDeleteId) setPreviewTask(null);
+      if (editing?.id === confirmDeleteId) setDialogOpen(false);
+    }
+    setConfirmDeleteId(null);
   }
 
   // Esperar a saber si hay perfil elegido.
@@ -103,17 +128,6 @@ export function Planner() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setColorMode((m) => (m === "person" ? "category" : "person"))}
-              title="Cambiar cómo se colorean las tareas"
-            >
-              <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">
-                Color: {colorMode === "person" ? "Persona" : "Grupo"}
-              </span>
-            </Button>
             {currentPerson?.is_admin && (
               <Button
                 variant="outline"
@@ -174,7 +188,8 @@ export function Planner() {
                 onToggleDone={toggleDone}
                 onPostpone={postpone}
                 onEdit={openEdit}
-                onDelete={(t) => planner.deleteTask(t.id)}
+                onDelete={(t) => requestDelete(t.id)}
+                onPreview={(t) => setPreviewTask(t)}
               />
             )}
             {view === "week" && (
@@ -232,7 +247,7 @@ export function Planner() {
         people={people}
         categories={categories}
         onSave={handleSave}
-        onDelete={(id) => planner.deleteTask(id)}
+        onDelete={(id) => requestDelete(id)}
       />
 
       {currentPerson?.is_admin && (
@@ -242,6 +257,7 @@ export function Planner() {
           people={people}
           categories={categories}
           currentPersonId={me.personId}
+          onChangeProfile={me.clear}
           onUpdatePerson={planner.updatePerson}
           onCreatePerson={planner.createPerson}
           onDeletePerson={planner.deletePerson}
@@ -250,6 +266,37 @@ export function Planner() {
           onDeleteCategory={planner.deleteCategory}
         />
       )}
+
+      <TaskPreviewSheet
+        open={previewTask !== null}
+        task={previewTask}
+        color={previewTask ? colorFor(previewTask) : "#94a3b8"}
+        person={previewTask ? peopleById.get(previewTask.person_id ?? "") : undefined}
+        category={previewTask ? catsById.get(previewTask.category_id ?? "") : undefined}
+        onClose={() => setPreviewTask(null)}
+        onToggleDone={() => previewTask && toggleDone(previewTask)}
+        onPostpone={() => previewTask && postpone(previewTask)}
+        onEdit={() => { if (previewTask) { setPreviewTask(null); openEdit(previewTask); } }}
+        onDelete={() => { if (previewTask) { requestDelete(previewTask.id); setPreviewTask(null); } }}
+      />
+
+      <Modal
+        open={confirmDeleteId !== null}
+        onClose={() => setConfirmDeleteId(null)}
+        title="Eliminar tarea"
+      >
+        <p className="text-sm text-[var(--muted)] mb-6">
+          ¿Estás seguro que deseas eliminar esta tarea? Esta acción no se puede deshacer.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={confirmDelete}>
+            Eliminar
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
