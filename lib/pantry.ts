@@ -1,0 +1,63 @@
+export const ALICIA_PROFILE = {
+  nameMatch: "alicia",
+  ageMonths: 10,
+  ingredients: [
+    "huevos",
+    "avena",
+    "nestum",
+    "queso",
+    "cuajada",
+    "quesito",
+    "galletas ducales",
+    "yogurt",
+    "arepa",
+    "arepa de chócolo",
+    "arepa de yuca",
+    "arroz",
+    "frijol",
+    "lenteja",
+    "zanahoria",
+    "tomate",
+    "garbanzos",
+    "carne de res",
+    "carne de cerdo",
+    "salmón",
+    "pescado",
+    "manzana",
+    "fresas",
+    "uvas",
+    "granadilla",
+    "mango",
+    "pera",
+  ],
+  fruits: ["manzana", "fresas", "uvas", "granadilla", "mango", "pera"],
+};
+
+export const FAMILY_PROFILE = {
+  ingredients: [
+    "pastas",
+    "espaguetis",
+    "arroz",
+    "arroz con coco",
+    "frijoles",
+    "papa",
+    "zanahoria",
+    "tomate",
+    "cebolla",
+    "maduro",
+    "patacón",
+    "ensalada",
+    "carne de res",
+    "carne de cerdo",
+    "chicharrón",
+    "pescado",
+    "salmón",
+    "atún",
+    "mondongo",
+  ],
+  // Platos que ya se preparan en casa — la IA los puede sugerir directamente.
+  typicalDishes: ["sancocho", "sudado", "mondongo", "posta negra"],
+};
+
+// Keywords que indican un snack/algo — disparan sugerencias de compotas para Alicia.
+export const SNACK_KEYWORDS = ["algo", "media mañana", "media tarde", "merienda"];

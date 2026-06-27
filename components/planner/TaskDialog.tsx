@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { DrumPicker } from "@/components/ui/DrumPicker";
 import type { Category, Person, Task, TaskInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ALICIA_PROFILE } from "@/lib/pantry";
 
 interface TaskDialogProps {
   open: boolean;
@@ -50,6 +51,26 @@ function formatDuration(min: number): string {
   if (h && m) return `${h} h ${m} min`;
   if (h) return `${h} h`;
   return `${m} min`;
+}
+
+const FOOD_KEYWORDS = [
+  "desayuno",
+  "almuerzo",
+  "cena",
+  "comida",
+  "merienda",
+  "media mañana",
+  "media tarde",
+  "algo",
+  "brunch",
+  "postre",
+  "aperitivo",
+  "snack",
+];
+
+function detectFoodKeyword(text: string): string | null {
+  const lower = text.toLowerCase();
+  return FOOD_KEYWORDS.find((k) => lower.includes(k)) ?? null;
 }
 
 const WEEKDAYS = [
@@ -101,6 +122,9 @@ export function TaskDialog({
 }: TaskDialogProps) {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [date, setDate] = useState(toDateInput(defaultDate));
   const [hour, setHour] = useState(0);
   const [minute, setMinute] = useState(0);
@@ -111,9 +135,43 @@ export function TaskDialog({
   const [recurDays, setRecurDays] = useState<number[]>([]);
   const [recurUntil, setRecurUntil] = useState("");
 
+  // Sugerencias de alimentos: se disparan cuando el título contiene una palabra clave.
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const keyword = detectFoodKeyword(title);
+    if (!keyword) {
+      setSuggestions([]);
+      return;
+    }
+    const selectedPerson = people.find((p) => p.id === personId);
+    const isAlicia =
+      selectedPerson?.name.toLowerCase() === ALICIA_PROFILE.nameMatch;
+
+    debounceRef.current = setTimeout(async () => {
+      setSuggestionsLoading(true);
+      try {
+        const res = await fetch("/api/food-suggestions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword, isAlicia }),
+        });
+        const data = await res.json();
+        setSuggestions(data.suggestions ?? []);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    }, 600);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [title, personId, people]);
+
   // Rellenar el formulario al abrir.
   useEffect(() => {
     if (!open) return;
+    setSuggestions([]);
     if (task) {
       const d = new Date(task.scheduled_at);
       const snapped = snapToFive(d);
@@ -172,41 +230,6 @@ export function TaskDialog({
   return (
     <Modal open={open} onClose={onClose} title={task ? "Editar tarea" : "Nueva tarea"}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className={labelClass}>¿Qué hay que hacer?</label>
-          <input
-            autoFocus
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ej. Regar las plantas"
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Fecha</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-          <div className="flex justify-around mb-2">
-            <span className="text-xs font-medium text-[var(--muted)] w-32 text-center">Hora</span>
-            <span className="text-xs font-medium text-[var(--muted)] w-20 text-center">Duración</span>
-          </div>
-          <div className="flex items-center justify-center gap-1">
-            <DrumPicker options={HOUR_OPTIONS} value={hour} onChange={setHour} width={60} />
-            <span className="text-lg font-semibold text-[var(--muted)] pb-px select-none">:</span>
-            <DrumPicker options={MINUTE_OPTIONS} value={minute} onChange={setMinute} width={56} />
-            <div className="w-px self-stretch bg-[var(--border)] mx-3" />
-            <DrumPicker options={DURATION_OPTIONS} value={duration} onChange={setDuration} width={80} />
-          </div>
-        </div>
-
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelClass}>Persona</label>
@@ -237,6 +260,65 @@ export function TaskDialog({
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div>
+          <label className={labelClass}>¿Qué hay que hacer?</label>
+          <input
+            autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ej. Regar las plantas"
+            className={inputClass}
+          />
+          {suggestionsLoading && (
+            <p className="mt-1.5 text-xs text-[var(--muted)]">Buscando sugerencias…</p>
+          )}
+          {!suggestionsLoading && suggestions.length > 0 && (
+            <div className="mt-1.5">
+              <p className="text-xs text-[var(--muted)] mb-1">
+                {people.find((p) => p.id === personId)?.name.toLowerCase() === ALICIA_PROFILE.nameMatch
+                  ? `Sugerencias para Alicia (${ALICIA_PROFILE.ageMonths} meses):`
+                  : "Sugerencias:"}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setTitle(s)}
+                    className="px-2.5 py-0.5 rounded-full bg-[var(--primary)]/10 text-xs text-[var(--primary)] hover:bg-[var(--primary)]/20 transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className={labelClass}>Fecha</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+          <div className="flex justify-around mb-2">
+            <span className="text-xs font-medium text-[var(--muted)] w-32 text-center">Hora</span>
+            <span className="text-xs font-medium text-[var(--muted)] w-20 text-center">Duración</span>
+          </div>
+          <div className="flex items-center justify-center gap-1">
+            <DrumPicker options={HOUR_OPTIONS} value={hour} onChange={setHour} width={60} />
+            <span className="text-lg font-semibold text-[var(--muted)] pb-px select-none">:</span>
+            <DrumPicker options={MINUTE_OPTIONS} value={minute} onChange={setMinute} width={56} />
+            <div className="w-px self-stretch bg-[var(--border)] mx-3" />
+            <DrumPicker options={DURATION_OPTIONS} value={duration} onChange={setDuration} width={80} />
           </div>
         </div>
 
