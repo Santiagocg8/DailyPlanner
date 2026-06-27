@@ -53,6 +53,20 @@ create policy "open people"     on public.people     for all using (true) with c
 create policy "open categories" on public.categories for all using (true) with check (true);
 create policy "open tasks"      on public.tasks      for all using (true) with check (true);
 
+-- Despensa (ingredientes compartidos) -------------------------------------
+create table if not exists public.pantry_items (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  is_baby_safe boolean not null default false,
+  is_fruit boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter publication supabase_realtime add table public.pantry_items;
+
+alter table public.pantry_items enable row level security;
+create policy "open pantry" on public.pantry_items for all using (true) with check (true);
+
 -- Datos iniciales -----------------------------------------------------------
 insert into public.people (name, color, avatar_emoji, is_admin) values
   ('Mamá',     '#ec4899', '👩', false),

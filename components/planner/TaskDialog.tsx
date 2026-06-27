@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { DrumPicker } from "@/components/ui/DrumPicker";
-import type { Category, Person, Task, TaskInput } from "@/lib/types";
+import type { Category, PantryItem, Person, Task, TaskInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ALICIA_PROFILE } from "@/lib/pantry";
 
@@ -21,6 +20,7 @@ interface TaskDialogProps {
   defaultPersonId: string | null;
   people: Person[];
   categories: Category[];
+  pantryItems: PantryItem[];
   onSave: (input: TaskInput, id?: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -118,6 +118,7 @@ export function TaskDialog({
   defaultPersonId,
   people,
   categories,
+  pantryItems,
   onSave,
   onDelete,
 }: TaskDialogProps) {
@@ -151,10 +152,21 @@ export function TaskDialog({
     debounceRef.current = setTimeout(async () => {
       setSuggestionsLoading(true);
       try {
+        const ingredients = pantryItems
+          .filter((i) => !isAlicia || i.is_baby_safe)
+          .map((i) => i.name);
+        const fruits = pantryItems
+          .filter((i) => i.is_fruit && (!isAlicia || i.is_baby_safe))
+          .map((i) => i.name);
         const res = await fetch("/api/food-suggestions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ keyword, isAlicia }),
+          body: JSON.stringify({
+            keyword,
+            isAlicia,
+            ingredients: ingredients.length > 0 ? ingredients : undefined,
+            fruits: fruits.length > 0 ? fruits : undefined,
+          }),
         });
         const data = await res.json();
         setSuggestions(data.suggestions ?? []);
@@ -167,7 +179,7 @@ export function TaskDialog({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [title, personId, people]);
+  }, [title, personId, people, pantryItems]);
 
   // Rellenar el formulario al abrir.
   useEffect(() => {
@@ -333,44 +345,6 @@ export function TaskDialog({
             placeholder="Detalles…"
           />
         </div>
-
-        {/* Ideas de comida para la bebé */}
-        {(foodLoading || foodSuggestions.length > 0) && (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted)]">
-              <Sparkles className="h-3.5 w-3.5" />
-              Ideas para la bebé
-            </div>
-            {foodLoading ? (
-              <div className="flex gap-2">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-7 rounded-full bg-[var(--border)] animate-pulse"
-                    style={{ width: `${60 + i * 20}px` }}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {foodSuggestions.map((s, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setNotes((n) => (n ? `${n}\n${s}` : s))}
-                    className={cn(
-                      "px-3 py-1 rounded-full text-xs font-medium border border-[var(--border)]",
-                      "hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] hover:border-[var(--primary)]",
-                      "transition-colors active:scale-95"
-                    )}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {!task && (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 space-y-3">

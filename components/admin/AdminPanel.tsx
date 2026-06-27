@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Shield, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, Shield, ShieldCheck, Baby, Apple } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import type { Category, Person } from "@/lib/types";
 import { cn, readableTextColor } from "@/lib/utils";
+import { usePantry } from "@/lib/usePantry";
 
 const PALETTE = [
   "#ec4899", "#f43f5e", "#ef4444", "#f97316",
@@ -37,6 +38,111 @@ interface AdminPanelProps {
 
 const inputClass =
   "w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[var(--ring)]";
+
+function PantrySection() {
+  const { items, addItem, updateItem, removeItem } = usePantry();
+  const [name, setName] = useState("");
+  const [isBabySafe, setIsBabySafe] = useState(false);
+  const [isFruit, setIsFruit] = useState(false);
+
+  function add() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    addItem(trimmed, isBabySafe, isFruit);
+    setName("");
+    setIsBabySafe(false);
+    setIsFruit(false);
+  }
+
+  return (
+    <section>
+      <h3 className="text-sm font-semibold mb-2 text-[var(--muted)] uppercase tracking-wide">
+        Despensa
+      </h3>
+      <p className="text-xs text-[var(--muted)] mb-3">
+        Ingredientes disponibles en casa. Marca <Baby className="inline h-3 w-3" /> si es apto para Alicia y <Apple className="inline h-3 w-3" /> si es una fruta.
+      </p>
+
+      <div className="space-y-1.5 mb-3 max-h-52 overflow-y-auto pr-1">
+        {items.length === 0 && (
+          <p className="text-xs text-[var(--muted)] italic">Sin ingredientes aún.</p>
+        )}
+        {items.map((item) => (
+          <div key={item.id} className="flex items-center gap-2">
+            <span className="flex-1 text-sm truncate">{item.name}</span>
+            <button
+              type="button"
+              title="Apto para Alicia (bebé)"
+              onClick={() => updateItem(item.id, { is_baby_safe: !item.is_baby_safe })}
+              className={cn(
+                "h-7 w-7 shrink-0 rounded-lg flex items-center justify-center transition-colors",
+                item.is_baby_safe
+                  ? "bg-pink-100 text-pink-600 dark:bg-pink-900/30"
+                  : "text-[var(--muted)] hover:bg-black/5 dark:hover:bg-white/10"
+              )}
+            >
+              <Baby className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              title="Es una fruta (compotas)"
+              onClick={() => updateItem(item.id, { is_fruit: !item.is_fruit })}
+              className={cn(
+                "h-7 w-7 shrink-0 rounded-lg flex items-center justify-center transition-colors",
+                item.is_fruit
+                  ? "bg-green-100 text-green-600 dark:bg-green-900/30"
+                  : "text-[var(--muted)] hover:bg-black/5 dark:hover:bg-white/10"
+              )}
+            >
+              <Apple className="h-3.5 w-3.5" />
+            </button>
+            <DeleteButton onDelete={() => removeItem(item.id)} />
+          </div>
+        ))}
+      </div>
+
+      {/* Fila para agregar */}
+      <div className="flex items-center gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+          placeholder="Agregar ingrediente…"
+          className={inputClass}
+        />
+        <button
+          type="button"
+          title="Apto para Alicia"
+          onClick={() => setIsBabySafe((v) => !v)}
+          className={cn(
+            "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center transition-colors",
+            isBabySafe
+              ? "bg-pink-100 text-pink-600 dark:bg-pink-900/30"
+              : "text-[var(--muted)] hover:bg-black/5 dark:hover:bg-white/10 border border-[var(--border)]"
+          )}
+        >
+          <Baby className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          title="Es fruta"
+          onClick={() => setIsFruit((v) => !v)}
+          className={cn(
+            "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center transition-colors",
+            isFruit
+              ? "bg-green-100 text-green-600 dark:bg-green-900/30"
+              : "text-[var(--muted)] hover:bg-black/5 dark:hover:bg-white/10 border border-[var(--border)]"
+          )}
+        >
+          <Apple className="h-3.5 w-3.5" />
+        </button>
+        <Button type="button" size="icon" variant="outline" onClick={add} aria-label="Agregar">
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+    </section>
+  );
+}
 
 export function AdminPanel({
   open,
@@ -127,6 +233,9 @@ export function AdminPanel({
             onAdd={(name) => onCreateCategory({ name, color: "#8b5cf6" })}
           />
         </section>
+
+        {/* --- Despensa --- */}
+        <PantrySection />
       </div>
 
       <div className="flex justify-end pt-5">

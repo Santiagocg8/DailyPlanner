@@ -29,5 +29,13 @@ export interface Task {
 /** Datos para crear/editar una tarea (sin campos generados). */
 export type TaskInput = Omit<Task, "id" | "created_at">;
 
+export interface PantryItem {
+  id: string;
+  name: string;
+  is_baby_safe: boolean;
+  is_fruit: boolean;
+  created_at: string;
+}
+
 export type ColorMode = "person" | "category";
 export type ViewMode = "day" | "week" | "month";

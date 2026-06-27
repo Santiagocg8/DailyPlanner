@@ -1,14 +1,31 @@
 import type { NextRequest } from "next/server";
 import { ALICIA_PROFILE, FAMILY_PROFILE, SNACK_KEYWORDS } from "@/lib/pantry";
 
-function buildPrompt(keyword: string, isAlicia: boolean): string {
+function buildPrompt(
+  keyword: string,
+  isAlicia: boolean,
+  ingredients?: string[],
+  fruits?: string[]
+): string {
+  // Usa los ingredientes de la despensa (UI) si están disponibles, si no cae al archivo estático.
+  const resolvedIngredients =
+    ingredients && ingredients.length > 0
+      ? ingredients
+      : isAlicia
+      ? ALICIA_PROFILE.ingredients
+      : FAMILY_PROFILE.ingredients;
+
+  const resolvedFruits =
+    fruits && fruits.length > 0
+      ? fruits
+      : ALICIA_PROFILE.fruits;
+
   if (isAlicia) {
     const isSnack = SNACK_KEYWORDS.some((k) => keyword.toLowerCase().includes(k));
 
     if (isSnack) {
-      const fruits = ALICIA_PROFILE.fruits.join(", ");
       return (
-        `Tengo estas frutas disponibles: ${fruits}. ` +
+        `Tengo estas frutas disponibles: ${resolvedFruits.join(", ")}. ` +
         `Sugiere 6 compotas para el ${keyword} de una bebé de ${ALICIA_PROFILE.ageMonths} meses. ` +
         `Pueden ser compotas simples o combinadas de dos frutas, sin azúcar añadida. ` +
         `Usa únicamente las frutas de la lista. ` +
@@ -17,9 +34,8 @@ function buildPrompt(keyword: string, isAlicia: boolean): string {
       );
     }
 
-    const ingredients = ALICIA_PROFILE.ingredients.join(", ");
     return (
-      `Tengo estos ingredientes disponibles en casa: ${ingredients}. ` +
+      `Tengo estos ingredientes disponibles en casa: ${resolvedIngredients.join(", ")}. ` +
       `Sugiere 6 preparaciones concretas para el ${keyword} de una bebé de ${ALICIA_PROFILE.ageMonths} meses. ` +
       `Las preparaciones deben ser blandas, en puré o trozos pequeños, sin sal añadida y sin miel. ` +
       `Usa únicamente ingredientes de la lista. ` +
@@ -27,11 +43,9 @@ function buildPrompt(keyword: string, isAlicia: boolean): string {
     );
   }
 
-  // Perfil familiar
-  const ingredients = FAMILY_PROFILE.ingredients.join(", ");
   const dishes = FAMILY_PROFILE.typicalDishes.join(", ");
   return (
-    `Tengo estos ingredientes disponibles en casa: ${ingredients}. ` +
+    `Tengo estos ingredientes disponibles en casa: ${resolvedIngredients.join(", ")}. ` +
     `También preparo platos como: ${dishes}. ` +
     `Sugiere 6 preparaciones concretas para el ${keyword}, estilo colombiano (Medellín). ` +
     `Usa los ingredientes disponibles o los platos típicos mencionados. ` +
@@ -43,10 +57,10 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return Response.json({ suggestions: [] });
 
-  const { keyword, isAlicia } = await request.json();
+  const { keyword, isAlicia, ingredients, fruits } = await request.json();
   if (!keyword) return Response.json({ suggestions: [] });
 
-  const prompt = buildPrompt(keyword, !!isAlicia);
+  const prompt = buildPrompt(keyword, !!isAlicia, ingredients, fruits);
 
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {

@@ -5,6 +5,7 @@ import { Plus, Wifi, WifiOff, Settings } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { usePlanner } from "@/lib/usePlanner";
+import { usePantry } from "@/lib/usePantry";
 import { useCurrentPerson } from "@/lib/useCurrentPerson";
 import type { ColorMode, Task, TaskInput, ViewMode } from "@/lib/types";
 import { addDays, addMinutes, addMonths, parseISO } from "@/lib/time";
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 export function Planner() {
   const planner = usePlanner();
   const { people, categories, tasks, loading, isRealtime } = planner;
+  const { items: pantryItems } = usePantry();
   const me = useCurrentPerson();
 
   const [view, setView] = useState<ViewMode>("day");
@@ -246,6 +248,7 @@ export function Planner() {
         defaultPersonId={me.personId}
         people={people}
         categories={categories}
+        pantryItems={pantryItems}
         onSave={handleSave}
         onDelete={(id) => requestDelete(id)}
       />
