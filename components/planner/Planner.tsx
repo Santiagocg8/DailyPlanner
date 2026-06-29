@@ -107,8 +107,8 @@ export function Planner() {
     );
   }
 
-  // Pantalla de selección de perfil.
-  if (!me.personId && people.length > 0) {
+  // Pantalla de selección de perfil (también si el ID guardado no coincide con ninguna persona).
+  if ((!me.personId || !currentPerson) && people.length > 0) {
     return <PersonPicker people={people} onChoose={me.choose} />;
   }
 
