@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, isSupabaseEnabled } from "./supabase";
 import type { PantryItem } from "./types";
 
@@ -21,6 +21,7 @@ function saveLocal(items: PantryItem[]): void {
 export function usePantry() {
   const [items, setItems] = useState<PantryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const channelId = useRef(`pantry-changes-${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +41,7 @@ export function usePantry() {
       const client = supabase;
       loadFromSupabase();
       const channel = client
-        .channel("pantry-changes")
+        .channel(channelId.current)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "pantry_items" },
