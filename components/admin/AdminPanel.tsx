@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Trash2, Shield, ShieldCheck, Baby, Apple } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Plus, Trash2, Shield, ShieldCheck, Baby, Apple, Users, Tag, ShoppingBasket } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import type { Category, Person } from "@/lib/types";
 import { cn, readableTextColor } from "@/lib/utils";
 import { usePantry } from "@/lib/usePantry";
+
+type AdminTab = "personas" | "grupos" | "despensa";
 
 const PALETTE = [
   "#ec4899", "#f43f5e", "#ef4444", "#f97316",
@@ -40,7 +42,7 @@ const inputClass =
   "w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[var(--ring)]";
 
 function PantrySection() {
-  const { items, addItem, updateItem, removeItem } = usePantry();
+  const { items, loading, addItem, updateItem, removeItem } = usePantry();
   const [name, setName] = useState("");
   const [isBabySafe, setIsBabySafe] = useState(false);
   const [isFruit, setIsFruit] = useState(false);
@@ -55,20 +57,20 @@ function PantrySection() {
   }
 
   return (
-    <section>
-      <h3 className="text-sm font-semibold mb-2 text-[var(--muted)] uppercase tracking-wide">
-        Despensa
-      </h3>
-      <p className="text-xs text-[var(--muted)] mb-3">
+    <section className="flex flex-col gap-3">
+      <p className="text-xs text-[var(--muted)]">
         Ingredientes disponibles en casa. Marca <Baby className="inline h-3 w-3" /> si es apto para Alicia y <Apple className="inline h-3 w-3" /> si es una fruta.
       </p>
 
-      <div className="space-y-1.5 mb-3 max-h-52 overflow-y-auto pr-1">
-        {items.length === 0 && (
+      <div className="space-y-1.5 overflow-y-auto pr-1" style={{ maxHeight: "calc(60vh - 180px)" }}>
+        {loading && (
+          <p className="text-xs text-[var(--muted)] italic">Cargando…</p>
+        )}
+        {!loading && items.length === 0 && (
           <p className="text-xs text-[var(--muted)] italic">Sin ingredientes aún.</p>
         )}
         {items.map((item) => (
-          <div key={item.id} className="flex items-center gap-2">
+          <div key={item.id} className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-black/3 dark:hover:bg-white/5">
             <span className="flex-1 text-sm truncate">{item.name}</span>
             <button
               type="button"
@@ -101,8 +103,7 @@ function PantrySection() {
         ))}
       </div>
 
-      {/* Fila para agregar */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 pt-1 border-t border-[var(--border)]">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -144,6 +145,12 @@ function PantrySection() {
   );
 }
 
+const TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
+  { id: "personas", label: "Personas", icon: <Users className="h-3.5 w-3.5" /> },
+  { id: "grupos", label: "Grupos", icon: <Tag className="h-3.5 w-3.5" /> },
+  { id: "despensa", label: "Despensa", icon: <ShoppingBasket className="h-3.5 w-3.5" /> },
+];
+
 export function AdminPanel({
   open,
   onClose,
@@ -159,10 +166,11 @@ export function AdminPanel({
   onDeleteCategory,
 }: AdminPanelProps) {
   const currentPerson = people.find((p) => p.id === currentPersonId) ?? null;
+  const [tab, setTab] = useState<AdminTab>("personas");
 
   return (
     <Modal open={open} onClose={onClose} title="Administración">
-      <div className="space-y-6">
+      <div className="flex flex-col gap-4">
 
         {/* Perfil activo */}
         {currentPerson && (
@@ -188,54 +196,69 @@ export function AdminPanel({
             </button>
           </div>
         )}
-        {/* --- Personas --- */}
-        <section>
-          <h3 className="text-sm font-semibold mb-2 text-[var(--muted)] uppercase tracking-wide">
-            Personas
-          </h3>
-          <div className="space-y-2">
-            {people.map((p) => (
-              <PersonRow
-                key={p.id}
-                person={p}
-                isMe={p.id === currentPersonId}
-                onUpdate={(patch) => onUpdatePerson(p.id, patch)}
-                onDelete={() => onDeletePerson(p.id)}
-              />
-            ))}
-          </div>
-          <AddRow
-            placeholder="Nueva persona…"
-            showColor
-            onAdd={(name, color) =>
-              onCreatePerson({ name, color, avatar_emoji: "🙂", is_admin: false })
-            }
-          />
-        </section>
 
-        {/* --- Grupos --- */}
-        <section>
-          <h3 className="text-sm font-semibold mb-2 text-[var(--muted)] uppercase tracking-wide">
-            Grupos de tareas
-          </h3>
-          <div className="space-y-2">
-            {categories.map((c) => (
-              <CategoryRow
-                key={c.id}
-                category={c}
-                onUpdate={(patch) => onUpdateCategory(c.id, patch)}
-                onDelete={() => onDeleteCategory(c.id)}
-              />
-            ))}
-          </div>
-          <AddRow
-            placeholder="Nuevo grupo…"
-            onAdd={(name) => onCreateCategory({ name, color: "#8b5cf6" })}
-          />
-        </section>
+        {/* Tab bar */}
+        <div className="flex gap-1 rounded-xl bg-[var(--border)]/30 p-1">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
+                tab === t.id
+                  ? "bg-[var(--surface)] shadow-sm text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+              )}
+            >
+              {t.icon}
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-        {/* --- Despensa --- */}
-        <PantrySection />
+        {/* Tab content */}
+        <div className="min-h-[240px]">
+          {tab === "personas" && (
+            <section className="space-y-2">
+              {people.map((p) => (
+                <PersonRow
+                  key={p.id}
+                  person={p}
+                  isMe={p.id === currentPersonId}
+                  onUpdate={(patch) => onUpdatePerson(p.id, patch)}
+                  onDelete={() => onDeletePerson(p.id)}
+                />
+              ))}
+              <AddRow
+                placeholder="Nueva persona…"
+                showColor
+                onAdd={(name, color) =>
+                  onCreatePerson({ name, color, avatar_emoji: "🙂", is_admin: false })
+                }
+              />
+            </section>
+          )}
+
+          {tab === "grupos" && (
+            <section className="space-y-2">
+              {categories.map((c) => (
+                <CategoryRow
+                  key={c.id}
+                  category={c}
+                  onUpdate={(patch) => onUpdateCategory(c.id, patch)}
+                  onDelete={() => onDeleteCategory(c.id)}
+                />
+              ))}
+              <AddRow
+                placeholder="Nuevo grupo…"
+                onAdd={(name) => onCreateCategory({ name, color: "#8b5cf6" })}
+              />
+            </section>
+          )}
+
+          {tab === "despensa" && <PantrySection />}
+        </div>
       </div>
 
       <div className="flex justify-end pt-5">
