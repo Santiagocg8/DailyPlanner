@@ -116,10 +116,10 @@ export function Planner() {
     <div className="flex flex-col flex-1 min-h-0">
       {/* Encabezado */}
       <header className="px-3 sm:px-6 pt-4 pb-3 space-y-3 border-b border-[var(--border)] bg-[var(--surface)]/60 backdrop-blur">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🗓️</span>
-            <h1 className="text-lg font-bold">Planner Familiar</h1>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xl shrink-0">🗓️</span>
+            <h1 className="text-lg font-bold hidden sm:block">Planner Familiar</h1>
             <span
               className="hidden sm:inline-flex items-center gap-1 text-xs text-[var(--muted)] ml-2"
               title={isRealtime ? "Sincronizado entre dispositivos" : "Modo local (este dispositivo)"}
@@ -129,7 +129,7 @@ export function Planner() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {currentPerson?.is_admin && (
               <Button
                 variant="outline"
@@ -148,12 +148,12 @@ export function Planner() {
                 title="Cambiar de perfil"
               >
                 <span
-                  className="h-7 w-7 rounded-full flex items-center justify-center text-sm"
+                  className="h-7 w-7 rounded-full flex items-center justify-center text-sm shrink-0"
                   style={{ background: currentPerson.color }}
                 >
                   {currentPerson.avatar_emoji ?? currentPerson.name[0]}
                 </span>
-                <span className="text-sm font-medium">{currentPerson.name}</span>
+                <span className="text-sm font-medium max-w-[80px] truncate">{currentPerson.name}</span>
               </button>
             )}
           </div>
