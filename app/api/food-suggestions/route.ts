@@ -55,10 +55,10 @@ function buildPrompt(
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return Response.json({ suggestions: [], debug: "no_api_key" });
+  if (!apiKey) return Response.json({ suggestions: [] });
 
   const { keyword, isAlicia, ingredients, fruits } = await request.json();
-  if (!keyword) return Response.json({ suggestions: [], debug: "no_keyword" });
+  if (!keyword) return Response.json({ suggestions: [] });
 
   const prompt = buildPrompt(keyword, !!isAlicia, ingredients, fruits);
 
@@ -77,11 +77,7 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.error("[food-suggestions] OpenRouter error", res.status, errBody);
-      return Response.json({ suggestions: [], debug: `openrouter_${res.status}` });
-    }
+    if (!res.ok) return Response.json({ suggestions: [] });
 
     const data = await res.json();
     const text: string = data.choices?.[0]?.message?.content ?? "";
@@ -93,8 +89,7 @@ export async function POST(request: NextRequest) {
     )].slice(0, 6);
 
     return Response.json({ suggestions });
-  } catch (err) {
-    console.error("[food-suggestions] fetch error", err);
-    return Response.json({ suggestions: [], debug: "fetch_error" });
+  } catch {
+    return Response.json({ suggestions: [] });
   }
 }
