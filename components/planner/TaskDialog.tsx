@@ -158,17 +158,20 @@ export function TaskDialog({
         const fruits = pantryItems
           .filter((i) => i.is_fruit && (!isAlicia || i.is_baby_safe))
           .map((i) => i.name);
+        const payload = {
+          keyword,
+          isAlicia,
+          ingredients: ingredients.length > 0 ? ingredients : undefined,
+          fruits: fruits.length > 0 ? fruits : undefined,
+        };
+        console.log("[food-suggestions] request", payload);
         const res = await fetch("/api/food-suggestions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            keyword,
-            isAlicia,
-            ingredients: ingredients.length > 0 ? ingredients : undefined,
-            fruits: fruits.length > 0 ? fruits : undefined,
-          }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
+        console.log("[food-suggestions] response", data);
         setSuggestions(data.suggestions ?? []);
       } catch {
         setSuggestions([]);
