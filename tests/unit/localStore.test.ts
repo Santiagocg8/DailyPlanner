@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { newId, defaultData, loadLocal, saveLocal } from "@/lib/localStore";
 
 // localStorage no existe en Node — jsdom lo provee; lo limpiamos entre tests.
@@ -16,6 +16,18 @@ describe("newId", () => {
   it("returns unique values", () => {
     const ids = new Set(Array.from({ length: 100 }, () => newId()));
     expect(ids.size).toBe(100);
+  });
+
+  it("usa el fallback cuando crypto.randomUUID no está disponible", () => {
+    // Simula un entorno sin randomUUID (navegadores antiguos / contexto inseguro)
+    // reemplazando el global crypto por uno que no expone el método.
+    vi.stubGlobal("crypto", {});
+    try {
+      const id = newId();
+      expect(id).toMatch(/^id-\d+-\d+$/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

@@ -80,6 +80,32 @@ describe("POST /api/food-suggestions", () => {
     expect(data.suggestions).toContain("Compota de manzana");
   });
 
+  it("para Alicia con comida que no es snack (almuerzo), el prompt pide preparaciones de bebé", async () => {
+    process.env.OPENROUTER_API_KEY = "test-key";
+
+    const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "Puré de papa, Avena con manzana" } }],
+        }),
+        { status: 200 }
+      )
+    );
+
+    const res = await POST(makeRequest({ keyword: "almuerzo", isAlicia: true }));
+    const data = await res.json();
+
+    const sentBody = JSON.parse(
+      (mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string
+    );
+    const prompt: string = sentBody.messages[0].content;
+    expect(prompt).toContain("preparaciones");
+    expect(prompt).toContain("bebé");
+    expect(prompt).not.toContain("compotas");
+
+    expect(data.suggestions).toContain("Puré de papa");
+  });
+
   it("usa ingredientes de la despensa si se proveen", async () => {
     process.env.OPENROUTER_API_KEY = "test-key";
 
@@ -101,6 +127,40 @@ describe("POST /api/food-suggestions", () => {
     const sentBody = JSON.parse((mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(sentBody.messages[0].content).toContain("lentejas");
     expect(sentBody.messages[0].content).toContain("cebolla");
+  });
+
+  it("para Alicia (snack) usa las frutas provistas de la despensa", async () => {
+    process.env.OPENROUTER_API_KEY = "test-key";
+
+    const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: "Compota de banano" } }] }),
+        { status: 200 }
+      )
+    );
+
+    await POST(
+      makeRequest({ keyword: "media mañana", isAlicia: true, fruits: ["banano", "papaya"] })
+    );
+
+    const sentBody = JSON.parse(
+      (mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string
+    );
+    expect(sentBody.messages[0].content).toContain("banano");
+    expect(sentBody.messages[0].content).toContain("papaya");
+  });
+
+  it("devuelve suggestions vacías si la respuesta no trae choices", async () => {
+    process.env.OPENROUTER_API_KEY = "test-key";
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({}), { status: 200 })
+    );
+
+    const res = await POST(makeRequest({ keyword: "almuerzo", isAlicia: false }));
+    const data = await res.json();
+
+    expect(data.suggestions).toEqual([]);
   });
 
   it("devuelve suggestions vacías si la respuesta de OpenRouter falla", async () => {

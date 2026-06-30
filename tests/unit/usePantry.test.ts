@@ -74,6 +74,30 @@ describe("usePantry (modo local)", () => {
     expect(result.current.items[0].is_fruit).toBe(true); // sin cambios
   });
 
+  it("updateItem solo modifica el item indicado", async () => {
+    const { result } = renderHook(() => usePantry());
+
+    await act(async () => {
+      await result.current.addItem("Item A", false, false);
+      await result.current.addItem("Item B", false, false);
+    });
+
+    const idA = result.current.items.find((i) => i.name === "Item A")!.id;
+
+    await act(async () => {
+      await result.current.updateItem(idA, { is_baby_safe: true });
+    });
+
+    expect(result.current.items.find((i) => i.name === "Item A")!.is_baby_safe).toBe(true);
+    expect(result.current.items.find((i) => i.name === "Item B")!.is_baby_safe).toBe(false);
+  });
+
+  it("ignora datos corruptos en localStorage (cae a lista vacía)", () => {
+    localStorage.setItem(LS_KEY, "{{no es json válido");
+    const { result } = renderHook(() => usePantry());
+    expect(result.current.items).toEqual([]);
+  });
+
   it("removeItem elimina el item correcto", async () => {
     const { result } = renderHook(() => usePantry());
 
