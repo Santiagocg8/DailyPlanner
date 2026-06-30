@@ -3,8 +3,8 @@
 > **Métricas vivas.** Generado automáticamente por `scripts/update-status.mjs`.
 > No editar a mano: corre `npm run status` para regenerar.
 
-**Última actualización:** 2026-06-30 01:16 UTC  
-**Branch:** `main` · **Commit:** `a2b29a8` (2026-06-29)
+**Última actualización:** 2026-06-30 02:21 UTC  
+**Branch:** `main` · **Commit:** `a18ee1c` (2026-06-29)
 
 ---
 
@@ -12,12 +12,12 @@
 
 | Métrica | Valor |
 |---|---|
-| Líneas de código (sin tests) | **3,438** |
-| Archivos totales | **41** |
-| Tests | **94** |
-| Cobertura (líneas) | **78.43%** 🟡 |
+| Líneas de código (sin tests) | **3,468** |
+| Archivos totales | **43** |
+| Tests | **118** |
+| Cobertura (líneas) | **100%** 🟢 |
 | Dependencias (prod) | **10** |
-| Commits | **21** |
+| Commits | **24** |
 
 ---
 
@@ -25,12 +25,12 @@
 
 | Tipo | Archivos | Líneas |
 |---|--:|--:|
-| TypeScript (.ts) | 14 | 844 |
-| React (.tsx) | 16 | 2,442 |
-| Tests (.test.*) | 9 | 1,024 |
+| TypeScript (.ts) | 14 | 854 |
+| React (.tsx) | 16 | 2,462 |
+| Tests (.test.*) | 11 | 1,602 |
 | Estilos (.css) | 1 | 69 |
 | SQL (.sql) | 1 | 83 |
-| **Total** | **41** | **4,462** |
+| **Total** | **43** | **5,070** |
 
 ### Estructura
 
@@ -45,16 +45,16 @@
 
 ## 🧪 Tests & Cobertura
 
-**94/94 tests** en 9 archivos (34 suites) · ✅ todos pasando
+**118/118 tests** en 11 archivos (38 suites) · ✅ todos pasando
 
 | Métrica | % | |
 |---|--:|---|
-| Líneas | 78.43% | `████████████████░░░░` 🟡 |
-| Statements | 77% | `███████████████░░░░░` 🟡 |
-| Funciones | 86.66% | `█████████████████░░░` 🟢 |
-| Ramas | 58.18% | `████████████░░░░░░░░` 🔴 |
+| Líneas | 100% | `████████████████████` 🟢 |
+| Statements | 97.08% | `███████████████████░` 🟢 |
+| Funciones | 96.66% | `███████████████████░` 🟢 |
+| Ramas | 94.54% | `███████████████████░` 🟢 |
 
-_200/255 líneas cubiertas._
+_255/255 líneas cubiertas._
 
 ---
 
@@ -107,10 +107,10 @@ _200/255 líneas cubiertas._
 
 | Métrica | Valor |
 |---|---|
-| Commits | 21 |
+| Commits | 24 |
 | Contribuidores | 3 |
 | Branch actual | `main` |
-| Último commit | 2026-06-29 (`a2b29a8`) |
+| Último commit | 2026-06-29 (`a18ee1c`) |
 
 ---
 
