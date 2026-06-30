@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+
+echo "▶ Ejecutando tests antes del commit..."
+npm test
+
+echo "✓ Tests pasaron — continuando con el commit."

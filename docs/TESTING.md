@@ -126,7 +126,22 @@ npm test              # corre todos los tests una vez
 npm run test:watch    # modo watch durante desarrollo
 npm run test:coverage # reporte de cobertura
 npm run test:e2e      # tests end-to-end con Playwright
+npm run status        # corre tests+cobertura y regenera docs/PROJECT_STATUS.md
+npm run status:gen    # solo regenera el doc con los últimos artefactos
 ```
+
+## Métricas vivas — `docs/PROJECT_STATUS.md`
+
+`scripts/update-status.mjs` genera un panel con métricas del proyecto
+(líneas de código, dependencias, número de tests y cobertura, métricas de
+git). Lee los artefactos que deja vitest:
+
+- `coverage/coverage-summary.json` → porcentajes de cobertura
+- `coverage/test-results.json` → número de tests pasando/fallando
+
+`npm run status` los genera y luego escribe el doc. Es un artefacto
+**generado**: no se edita a mano. Conviene regenerarlo antes de cada PR
+relevante para mantener las cifras al día.
 
 ## Definición de "terminado" para una feature
 

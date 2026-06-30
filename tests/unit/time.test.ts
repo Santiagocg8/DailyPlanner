@@ -81,7 +81,7 @@ describe("rangeFor", () => {
   });
 
   it("month range stays within june 2024", () => {
-    const { from, to } = rangeFor("month", anchor);
+    const { from } = rangeFor("month", anchor);
     expect(from.startsWith("2024-06")).toBe(true);
     // El fin puede ser de la semana de relleno, pero el mes empieza en junio
     expect(new Date(from).getFullYear()).toBe(2024);
