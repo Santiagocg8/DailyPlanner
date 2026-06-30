@@ -9,10 +9,15 @@ export function useCurrentPerson() {
   const [personId, setPersonId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
+  // Lectura de localStorage tras el montaje (no existe en el servidor): el
+  // estado inicial es null/false para evitar desajustes de hidratación y se
+  // sincroniza una vez en el cliente. La regla sobre-marca este caso válido.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setPersonId(window.localStorage.getItem(KEY));
     setReady(true);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function choose(id: string) {
     window.localStorage.setItem(KEY, id);

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef } from "react";
 import type { Category, ColorMode, Person, Task } from "@/lib/types";
 import {
   addMinutes,
-  DAY_START_HOUR,
   HOUR_HEIGHT,
   isSameDay,
   isTaskActive,

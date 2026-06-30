@@ -142,6 +142,8 @@ export function TaskDialog({
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const keyword = detectFoodKeyword(title);
     if (!keyword) {
+      // Limpia sugerencias previas dentro del efecto que consulta la API.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions([]);
       return;
     }
@@ -184,6 +186,8 @@ export function TaskDialog({
   // Rellenar el formulario al abrir.
   useEffect(() => {
     if (!open) return;
+    // Reinicia el formulario al abrir el diálogo (sincronización con props).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSuggestions([]);
     if (task) {
       const d = new Date(task.scheduled_at);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { supabase, isSupabaseEnabled } from "./supabase";
 import type { PantryItem } from "./types";
 
@@ -21,7 +21,9 @@ function saveLocal(items: PantryItem[]): void {
 export function usePantry() {
   const [items, setItems] = useState<PantryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const channelId = useRef(`pantry-changes-${Math.random().toString(36).slice(2)}`);
+  // useId da un identificador estable y único por instancia, sin la impureza
+  // de Math.random() durante el render.
+  const channelId = `pantry-changes-${useId()}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -41,7 +43,7 @@ export function usePantry() {
       const client = supabase;
       loadFromSupabase();
       const channel = client
-        .channel(channelId.current)
+        .channel(channelId)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "pantry_items" },
@@ -53,6 +55,9 @@ export function usePantry() {
         client.removeChannel(channel);
       };
     } else {
+      // Carga inicial desde localStorage y suscripción a cambios en otras
+      // pestañas: lectura legítima de un sistema externo en el montaje.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setItems(loadLocal());
       setLoading(false);
       const onStorage = () => setItems(loadLocal());
@@ -62,7 +67,7 @@ export function usePantry() {
         window.removeEventListener("storage", onStorage);
       };
     }
-  }, []);
+  }, [channelId]);
 
   const addItem = useCallback(
     async (name: string, isBabySafe: boolean, isFruit: boolean) => {

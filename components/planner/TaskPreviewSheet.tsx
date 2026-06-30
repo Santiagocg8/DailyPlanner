@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, Clock, Pencil, RotateCcw, Trash2, X } from "lucide-react";
 import type { Category, Person, Task } from "@/lib/types";
@@ -46,22 +46,27 @@ export function TaskPreviewSheet({
   onEdit,
   onDelete,
 }: TaskPreviewSheetProps) {
-  const taskRef = useRef(task);
-  const colorRef = useRef(color);
-  const personRef = useRef(person);
-  const categoryRef = useRef(category);
-
-  if (task) {
-    taskRef.current = task;
-    colorRef.current = color;
-    personRef.current = person;
-    categoryRef.current = category;
+  // Conserva el último contenido no-nulo para que la hoja siga mostrando los
+  // datos mientras se desliza al cerrarse (cuando `task` pasa a null). Se
+  // ajusta el estado durante el render —patrón soportado por React— en lugar
+  // de mutar refs durante el render.
+  const [snapshot, setSnapshot] = useState(
+    task ? { task, color, person, category } : null
+  );
+  if (
+    task &&
+    (task !== snapshot?.task ||
+      color !== snapshot?.color ||
+      person !== snapshot?.person ||
+      category !== snapshot?.category)
+  ) {
+    setSnapshot({ task, color, person, category });
   }
 
-  const t = taskRef.current;
-  const c = colorRef.current;
-  const p = personRef.current;
-  const cat = categoryRef.current;
+  const t = snapshot?.task ?? null;
+  const c = snapshot?.color ?? color;
+  const p = snapshot?.person;
+  const cat = snapshot?.category;
 
   return (
     <AnimatePresence>

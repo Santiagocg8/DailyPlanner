@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Plus, Trash2, Shield, ShieldCheck, Baby, Apple, Users, Tag, ShoppingBasket } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -346,7 +346,13 @@ function PersonRow({
 }) {
   const [name, setName] = useState(person.name);
 
-  useEffect(() => { setName(person.name); }, [person.name]);
+  // Sincroniza el input si el nombre cambia desde fuera (p. ej. realtime),
+  // ajustando el estado durante el render en lugar de en un efecto.
+  const [prevName, setPrevName] = useState(person.name);
+  if (person.name !== prevName) {
+    setPrevName(person.name);
+    setName(person.name);
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -391,7 +397,13 @@ function CategoryRow({
 }) {
   const [name, setName] = useState(category.name);
 
-  useEffect(() => { setName(category.name); }, [category.name]);
+  // Sincroniza el input si el nombre cambia desde fuera (p. ej. realtime),
+  // ajustando el estado durante el render en lugar de en un efecto.
+  const [prevName, setPrevName] = useState(category.name);
+  if (category.name !== prevName) {
+    setPrevName(category.name);
+    setName(category.name);
+  }
 
   return (
     <div className="flex items-center gap-2">
